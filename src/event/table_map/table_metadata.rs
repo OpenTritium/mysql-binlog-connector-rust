@@ -153,7 +153,7 @@ pub(crate) fn read_bitmap_reverted(
     bits_number: usize,
 ) -> Result<Vec<bool>, BinlogError> {
     let mut result = vec![false; bits_number];
-    let bytes_number = (bits_number + 7) / 8;
+    let bytes_number = bits_number.div_ceil(8);
     for i in 0..bytes_number {
         let value = cursor.read_u8()?;
         for y in 0..8 {
@@ -615,11 +615,11 @@ mod tests {
         let result = read_bitmap_reverted(&mut cursor, 5).unwrap();
 
         assert_eq!(result.len(), 5);
-        assert_eq!(result[0], true); // bit 7
-        assert_eq!(result[1], true); // bit 6
-        assert_eq!(result[2], false); // bit 5
-        assert_eq!(result[3], true); // bit 4
-        assert_eq!(result[4], false); // bit 3
+        assert!(result[0]); // bit 7
+        assert!(result[1]); // bit 6
+        assert!(!result[2]); // bit 5
+        assert!(result[3]); // bit 4
+        assert!(!result[4]); // bit 3
     }
 
     #[test]

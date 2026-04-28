@@ -258,7 +258,7 @@ mod tests {
 
     use super::GtidSet;
 
-    const UUID: &'static str = "24bc7850-2c16-11e6-a073-0242ac110002";
+    const UUID: &str = "24bc7850-2c16-11e6-a073-0242ac110002";
 
     #[test]
     fn test_add() {
@@ -337,7 +337,7 @@ mod tests {
 
     #[test]
     fn test_subset_of() {
-        let set = vec![
+        let set = [
             GtidSet::new("").unwrap(),
             GtidSet::new(&format!("{}:1-191", UUID)).unwrap(),
             GtidSet::new(&format!("{}:192-199", UUID)).unwrap(),
@@ -378,10 +378,7 @@ mod tests {
         let uuid_set = gtid_set.map.get(UUID).unwrap();
         assert_eq!(uuid_set.intervals.len(), 1);
         assert!(uuid_set.intervals.contains(&Interval::new(1, 191)));
-        assert_eq!(
-            uuid_set.intervals.iter().next(),
-            Some(&Interval::new(1, 191))
-        );
+        assert_eq!(uuid_set.intervals.first(), Some(&Interval::new(1, 191)));
         assert_eq!(uuid_set.intervals.last(), Some(&Interval::new(1, 191)));
         assert_eq!(gtid_set.to_string(), format!("{}:1-191", UUID));
     }
@@ -392,10 +389,7 @@ mod tests {
         let uuid_set = gtid_set.map.get(UUID).unwrap();
         assert_eq!(uuid_set.intervals.len(), 1);
         assert!(uuid_set.intervals.contains(&Interval::new(1, 199)));
-        assert_eq!(
-            uuid_set.intervals.iter().next(),
-            Some(&Interval::new(1, 199))
-        );
+        assert_eq!(uuid_set.intervals.first(), Some(&Interval::new(1, 199)));
         assert_eq!(uuid_set.intervals.last(), Some(&Interval::new(1, 199)));
         assert_eq!(gtid_set.to_string(), format!("{}:1-199", UUID));
     }
@@ -405,10 +399,7 @@ mod tests {
         let gtid_set = GtidSet::new(&format!("{}:1-191:193-199", UUID)).unwrap();
         let uuid_set = gtid_set.map.get(UUID).unwrap();
         assert_eq!(uuid_set.intervals.len(), 2);
-        assert_eq!(
-            uuid_set.intervals.iter().next(),
-            Some(&Interval::new(1, 191))
-        );
+        assert_eq!(uuid_set.intervals.first(), Some(&Interval::new(1, 191)));
         assert_eq!(uuid_set.intervals.last(), Some(&Interval::new(193, 199)));
         assert_eq!(gtid_set.to_string(), format!("{}:1-191:193-199", UUID));
     }

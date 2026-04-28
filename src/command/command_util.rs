@@ -143,10 +143,11 @@ impl CommandUtil {
     pub fn check_error_packet(buf: &Vec<u8>) -> Result<(), BinlogError> {
         if buf[0] == MysqlRespCode::ERROR {
             let error_packet = ErrorPacket::new(buf)?;
-            return Err(BinlogError::ConnectError(format!(
-                "connect mysql failed: {}",
-                error_packet.error_message
-            )));
+            return Err(BinlogError::server_error(
+                error_packet.error_code,
+                error_packet.sql_state,
+                error_packet.error_message,
+            ));
         }
         Ok(())
     }

@@ -21,11 +21,9 @@ impl DeleteRowsEvent {
     ) -> Result<Self, BinlogError> {
         let (table_id, _column_count, included_columns) =
             EventHeader::parse_rows_event_common_header(cursor, row_event_version)?;
-        let table_map_event = table_map_event_by_table_id.get(&table_id).ok_or_else(|| {
-            BinlogError::UnexpectedData(format!(
-                "missing TableMap event for table_id {table_id} while parsing DeleteRows"
-            ))
-        })?;
+        let table_map_event = table_map_event_by_table_id
+            .get(&table_id)
+            .ok_or_else(|| BinlogError::missing_table_map(table_id, "DeleteRows"))?;
 
         let mut rows: Vec<RowEvent> = Vec::new();
         while cursor.available() > 0 {
@@ -54,11 +52,12 @@ mod tests {
         let err = DeleteRowsEvent::parse(&mut cursor, &mut HashMap::new(), 1)
             .expect_err("missing table map should return an error");
 
-        match err {
-            BinlogError::UnexpectedData(message) => {
-                assert!(message.contains("missing TableMap event for table_id 1"));
+        assert!(matches!(
+            err,
+            BinlogError::MissingTableMap {
+                table_id: 1,
+                event: "DeleteRows"
             }
-            other => panic!("unexpected error: {other:?}"),
-        }
+        ));
     }
 }

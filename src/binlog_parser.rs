@@ -22,9 +22,27 @@ pub struct BinlogParser {
     pub table_map_event_by_table_id: HashMap<u64, TableMapEvent>,
 }
 
+#[derive(Debug, Clone, Default)]
+pub struct ParserState {
+    pub checksum_length: u8,
+    pub table_map_event_by_table_id: HashMap<u64, TableMapEvent>,
+}
+
 const MAGIC_VALUE: [u8; 4] = [0xfeu8, 0x62, 0x69, 0x6e];
 
 impl BinlogParser {
+    pub fn snapshot_state(&self) -> ParserState {
+        ParserState {
+            checksum_length: self.checksum_length,
+            table_map_event_by_table_id: self.table_map_event_by_table_id.clone(),
+        }
+    }
+
+    pub fn restore_state(&mut self, state: ParserState) {
+        self.checksum_length = state.checksum_length;
+        self.table_map_event_by_table_id = state.table_map_event_by_table_id;
+    }
+
     pub fn check_magic<S: Read + Seek>(&mut self, stream: &mut S) -> Result<(), BinlogError> {
         let mut magic = [0u8; 4];
         stream.read_exact(&mut magic)?;
@@ -143,5 +161,60 @@ impl BinlogParser {
             EventType::ExtWriteRows | EventType::ExtUpdateRows | EventType::ExtDeleteRows => 2,
             _ => 1,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{BinlogParser, ParserState};
+    use crate::event::table_map_event::TableMapEvent;
+
+    #[test]
+    fn parser_state_round_trips_checksum_and_table_map_cache() {
+        let mut parser = BinlogParser {
+            checksum_length: 4,
+            table_map_event_by_table_id: Default::default(),
+        };
+        parser.table_map_event_by_table_id.insert(
+            42,
+            TableMapEvent {
+                table_id: 42,
+                database_name: "test".to_string(),
+                table_name: "users".to_string(),
+                column_types: vec![3],
+                column_metas: vec![0],
+                null_bits: vec![false],
+                table_metadata: None,
+            },
+        );
+
+        let state = parser.snapshot_state();
+        let mut restored = BinlogParser {
+            checksum_length: 0,
+            table_map_event_by_table_id: Default::default(),
+        };
+        restored.restore_state(state);
+
+        assert_eq!(restored.checksum_length, 4);
+        assert_eq!(
+            restored
+                .table_map_event_by_table_id
+                .get(&42)
+                .expect("table map should be restored")
+                .table_name,
+            "users"
+        );
+    }
+
+    #[test]
+    fn empty_parser_state_is_valid() {
+        let mut parser = BinlogParser {
+            checksum_length: 4,
+            table_map_event_by_table_id: Default::default(),
+        };
+        parser.restore_state(ParserState::default());
+
+        assert_eq!(parser.checksum_length, 0);
+        assert!(parser.table_map_event_by_table_id.is_empty());
     }
 }

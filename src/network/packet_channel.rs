@@ -147,7 +147,7 @@ impl PacketChannel {
             Ok(Ok(_)) => {}
             Ok(Err(e)) => return Err(BinlogError::from(e)),
             Err(_) => {
-                return Err(BinlogError::network_timeout(format!(
+                return Err(BinlogError::idle_timeout(format!(
                     "Read binlog header timeout after {}s while waiting for packet header",
                     self.timeout_secs
                 )));

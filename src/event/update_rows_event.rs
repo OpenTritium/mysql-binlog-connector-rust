@@ -23,11 +23,9 @@ impl UpdateRowsEvent {
         let (table_id, column_count, included_columns_before) =
             EventHeader::parse_rows_event_common_header(cursor, row_event_version)?;
         let included_columns_after = cursor.read_bits(column_count, false)?;
-        let table_map_event = table_map_event_by_table_id.get(&table_id).ok_or_else(|| {
-            BinlogError::UnexpectedData(format!(
-                "missing TableMap event for table_id {table_id} while parsing UpdateRows"
-            ))
-        })?;
+        let table_map_event = table_map_event_by_table_id
+            .get(&table_id)
+            .ok_or_else(|| BinlogError::missing_table_map(table_id, "UpdateRows"))?;
 
         let mut rows: Vec<(RowEvent, RowEvent)> = Vec::new();
         while cursor.available() > 0 {
@@ -58,11 +56,12 @@ mod tests {
         let err = UpdateRowsEvent::parse(&mut cursor, &mut HashMap::new(), 1)
             .expect_err("missing table map should return an error");
 
-        match err {
-            BinlogError::UnexpectedData(message) => {
-                assert!(message.contains("missing TableMap event for table_id 1"));
+        assert!(matches!(
+            err,
+            BinlogError::MissingTableMap {
+                table_id: 1,
+                event: "UpdateRows"
             }
-            other => panic!("unexpected error: {other:?}"),
-        }
+        ));
     }
 }
